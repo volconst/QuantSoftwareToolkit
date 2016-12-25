@@ -32,23 +32,24 @@ def eventprofiler(df_events_arg, d_data, i_lookback=20, i_lookforward=20,
     tsu.returnize0(df_rets.values)
 
     if b_market_neutral == True:
-        df_rets = df_rets - df_rets[s_market_sym]
+        df_rets = df_rets.sub(df_rets[s_market_sym], axis=0)
         del df_rets[s_market_sym]
         del df_events[s_market_sym]
 
     df_close = df_close.reindex(columns=df_events.columns)
 
     # Removing the starting and the end events
-    df_events.values[0:i_lookback, :] = np.NaN
-    df_events.values[-i_lookforward:, :] = np.NaN
+    df_events.iloc[0:i_lookback] = np.NaN
+    df_events.iloc[-i_lookforward:] = np.NaN
 
     # Number of events
-    i_no_events = int(np.logical_not(np.isnan(df_events.values)).sum())
+    #i_no_events = int(np.logical_not(np.isnan(df_events.values)).sum())
+    i_no_events = int(df_events.sum().sum())
     assert i_no_events > 0, "Zero events in the event matrix"
     na_event_rets = "False"
 
     # Looking for the events and pushing them to a matrix
-    for i, s_sym in enumerate(df_events.columns):
+    for s_sym in df_events:
         for j, dt_date in enumerate(df_events.index):
             if df_events[s_sym][dt_date] == 1:
                 na_ret = df_rets[s_sym][j - i_lookback:j + 1 + i_lookforward]
@@ -76,7 +77,7 @@ def eventprofiler(df_events_arg, d_data, i_lookback=20, i_lookforward=20,
         plt.errorbar(li_time[i_lookback:], na_mean[i_lookback:],
                     yerr=na_std[i_lookback:], ecolor='#AAAAFF',
                     alpha=0.7)
-    plt.plot(li_time, na_mean, linewidth=3, label='mean', color='b')
+    ax = plt.plot(li_time, na_mean, linewidth=3, label='mean', color='b')
     plt.xlim(-i_lookback - 1, i_lookforward + 1)
     if b_market_neutral == True:
         plt.title('Market Relative mean return of ' +\
@@ -86,3 +87,4 @@ def eventprofiler(df_events_arg, d_data, i_lookback=20, i_lookforward=20,
     plt.xlabel('Days')
     plt.ylabel('Cumulative Returns')
     plt.savefig(s_filename, format='pdf')
+    return ax
